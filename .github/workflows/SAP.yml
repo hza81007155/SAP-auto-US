@@ -1,38 +1,34 @@
-name: Cloud Foundry Auto Start
+name: SAP CF APP保活
 
 on:
   schedule:
-    - cron: '50/10 23 * * *'  # 北京时间7:50-8:30每10分钟一次（UTC时间23:50-0:30）
-  workflow_dispatch:       # 允许手动触发
+    - cron: "*/5 0 * * *"
+    - cron: "*/10 0 * * *"
+    - cron: "*/15 0 * * *"
+    - cron: "*/20 0 * * *"
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
 
 jobs:
-  start-cf-apps:
+  keepalive:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-
-    - name: Install dependencies
-      run: pip install requests
-
-    - name: Debug environment variables
-      run: |
-        echo "CF_USERNAME: ${{ secrets.CF_USERNAME && '已设置' || '未设置' }}"
-        echo "CF_PASSWORD: ${{ secrets.CF_PASSWORD && '已设置' || '未设置' }}"
-        echo "CF_API_ENDPOINT: ${{ secrets.CF_API_ENDPOINT && '已设置' || '未设置' }}"
-        echo "CF_ORG: ${{ secrets.CF_ORG && '已设置' || '未设置' }}"
-        echo "CF_APPS: ${{ secrets.CF_APPS && '已设置' || '未设置' }}"
-
-    - name: Run Cloud Foundry Auto Start
-      run: python cf_auto_start.py
-      env:
-        CF_USERNAME: ${{ secrets.CF_USERNAME }}
-        CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
-        CF_API_ENDPOINT: ${{ secrets.CF_API_ENDPOINT }}
-        CF_ORG: ${{ secrets.CF_ORG }}
-        CF_APPS: ${{ secrets.CF_APPS }}
+      - name: KeepAlive via container
+        uses: docker://ghcr.io/uncleluogithub/cf-keepalive:latest
+        env:
+          CF_USERNAME: ${{ secrets.CF_USERNAME }}
+          CF_PASSWORD: ${{ secrets.CF_PASSWORD }}
+          CF_API:      ${{ secrets.CF_API }}
+          CF_ORG:      ${{ secrets.CF_ORG }}
+          CF_SPACE:    ${{ secrets.CF_SPACE }}
+          CF_APP:      ${{ secrets.CF_APP }}
+          CF_SET_PROCESS_HC: "true"
+          # 调试时打开
+          # DEBUG: "1"
+          # CF_TRACE: "true"
